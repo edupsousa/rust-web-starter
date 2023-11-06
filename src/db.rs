@@ -4,7 +4,6 @@ use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool, Pool, FromRow};
 use tracing::info;
 use uuid::Uuid;
 
-const DB_URL: &str = "sqlite://chat.db";
 const SQL_CREATE_MESSAGES_TABLE: &str = "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY NOT NULL, create_time NUMERIC NOT NULL, text TEXT NOT NULL);";
 
 #[derive(Debug, Clone, FromRow)]
@@ -20,15 +19,15 @@ pub struct ChatDB {
 }
 
 impl ChatDB {
-    pub async fn build() -> Result<Self> {
+    pub async fn build(db_url: &str) -> Result<Self> {
         let mut is_new = false;
-        if !Sqlite::database_exists(DB_URL).await.unwrap_or(false) {
-            info!("Creating database {}", DB_URL);
-            Sqlite::create_database(DB_URL).await?;
+        if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
+            info!("Creating database {}", db_url);
+            Sqlite::create_database(db_url).await?;
             is_new = true;
         }
-        info!("Connecting to database {}", DB_URL);
-        let pool = SqlitePool::connect(DB_URL).await?;
+        info!("Connecting to database {}", db_url);
+        let pool = SqlitePool::connect(db_url).await?;
         if is_new {
             sqlx::query(SQL_CREATE_MESSAGES_TABLE).execute(&pool).await?;
         }
@@ -57,11 +56,12 @@ impl ChatDB {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::ChatDB;
+    use crate::{db::ChatDB, config::Config};
 
     #[tokio::test]
     async fn build_instance() {
-        let db = ChatDB::build().await;
+        let config = Config::init();
+        let db = ChatDB::build(&config.database_url).await;
         assert_eq!(db.is_ok(), true);
         let db = db.unwrap();
         let messages = db.list_all_messages().await.unwrap();

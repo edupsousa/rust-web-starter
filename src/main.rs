@@ -5,35 +5,42 @@ use axum::{
     extract::State,
     response::IntoResponse,
     routing::{get, get_service, post},
-    Form, Router, http::StatusCode,
+    Form, Router, http::StatusCode, middleware,
 };
 use color_eyre::eyre::Result;
+use dotenv::dotenv;
 use serde::Deserialize;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
-use crate::db::ChatDB;
+use crate::{db::ChatDB, config::Config, jwt_auth::auth};
 
+mod config;
 mod db;
+mod model;
+mod jwt_auth;
 
 #[derive(Clone)]
-struct AppState {
+pub struct AppState {
     pub db: ChatDB,
+    pub env: Config,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
-
-    let db = ChatDB::build().await?;
-
-    let state = AppState { db };
+    dotenv().unwrap();
+    
+    let config = Config::init();
+    let db = ChatDB::build(&config.database_url).await?;
+    let state = AppState { db, env: config };
 
     let app = Router::new()
         .route("/", get_service(ServeFile::new("static/index.html")))
         .route("/message", post(send_message))
         .route("/messages", get(list_messages))
         .nest_service("/static", get_service(ServeDir::new("static")))
+        .route_layer(middleware::from_fn_with_state(state.clone(), auth))
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
