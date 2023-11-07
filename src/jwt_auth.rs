@@ -8,11 +8,17 @@ use axum::{
 
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::{model::TokenClaims, AppState};
+use crate::AppState;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenClaims {
+    pub sub: String,
+    pub iat: usize,
+    pub exp: usize,
+}
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub status: &'static str,
