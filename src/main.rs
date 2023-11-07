@@ -37,6 +37,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(index)) 
+        .route("/login", get(login))
         .route("/message", post(send_message))
         .route("/messages", get(list_messages))
         .nest_service("/assets", get_service(ServeDir::new("assets")))
@@ -97,4 +98,12 @@ async fn list_messages(State(state): State<AppState>) -> impl IntoResponse {
        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
     };
     return response;
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate;
+
+async fn login() -> impl IntoResponse {
+    LoginTemplate {}
 }
