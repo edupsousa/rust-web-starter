@@ -7,7 +7,7 @@ use crate::AppState;
 
 
 #[derive(Template)]
-#[template(path = "index.html")]
+#[template(path = "chat.html")]
 struct IndexTemplate;
 
 pub async fn get_chat_page() -> impl IntoResponse {
