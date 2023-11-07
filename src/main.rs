@@ -36,10 +36,10 @@ async fn main() -> Result<()> {
     let state = AppState { db, env: config };
 
     let app = Router::new()
-        .route("/", get_service(ServeFile::new("static/index.html")))
+        .route("/", get(index)) 
         .route("/message", post(send_message))
         .route("/messages", get(list_messages))
-        .nest_service("/static", get_service(ServeDir::new("static")))
+        .nest_service("/assets", get_service(ServeDir::new("assets")))
         .route_layer(middleware::from_fn_with_state(state.clone(), auth))
         .with_state(state);
 
@@ -50,6 +50,14 @@ async fn main() -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate;
+
+async fn index() -> impl IntoResponse {
+    IndexTemplate {}
 }
 
 #[derive(Template)]
