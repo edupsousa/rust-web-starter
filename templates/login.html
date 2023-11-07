@@ -9,6 +9,13 @@
   <form action="/login" method="post" class="flex flex-col gap-2">
     <input type="text" name="username" id="username" autocomplete="username" placeholder="Username" class="input input-bordered w-full">
     <input type="password" name="password" id="password" autocomplete="current-password" placeholder="Password" class="input input-bordered w-full">
+    {% match error %}
+      {% when Some with (val) %}
+        <div class="alert alert-error">
+          {{ val }}
+        </div>
+      {% when None %}
+    {% endmatch %}
     <button class="btn btn-primary">Login</button>
   </form>
 </div>
