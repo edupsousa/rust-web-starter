@@ -8,9 +8,9 @@ const SQL_CREATE_MESSAGES_TABLE: &str = "CREATE TABLE IF NOT EXISTS messages (id
 
 #[derive(Debug, Clone, FromRow)]
 pub struct Message {
-    id: String,
+    pub id: String,
     pub text: String,
-    create_time: i64,
+    pub create_time: i64,
 }
 
 #[derive(Clone)]
