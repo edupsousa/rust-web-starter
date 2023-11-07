@@ -12,10 +12,14 @@ pub struct LoginData {
     password: String,
 }
 
+pub enum LoginError {
+  BadValidation,
+}
+
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate {
-    pub error: Option<String>,
+    pub error: Option<LoginError>,
 }
 
 pub async fn get_login_page() -> impl IntoResponse {
@@ -27,7 +31,7 @@ pub async fn post_login(Form(form): Form<LoginData>) -> impl IntoResponse {
     return match validation {
         Ok(_) => LoginTemplate { error: None },
         Err(_) => LoginTemplate {
-            error: Some("Bad request!".to_string()),
+            error: Some(LoginError::BadValidation),
         },
     };
 }

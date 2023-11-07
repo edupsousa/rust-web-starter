@@ -10,9 +10,9 @@
     <input type="text" name="username" id="username" autocomplete="username" placeholder="Username" class="input input-bordered w-full">
     <input type="password" name="password" id="password" autocomplete="current-password" placeholder="Password" class="input input-bordered w-full">
     {% match error %}
-      {% when Some with (val) %}
+      {% when Some with (LoginError::BadValidation) %}
         <div class="alert alert-error">
-          {{ val }}
+          Field Validation Error
         </div>
       {% when None %}
     {% endmatch %}
