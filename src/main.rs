@@ -1,8 +1,9 @@
 use std::net::SocketAddr;
 
-use crate::{config::Config, db::ChatDB, jwt_auth::auth};
+use crate::{config::Config, db::ChatDB};
+use askama::Template;
+use askama_axum::IntoResponse;
 use axum::{
-    middleware,
     routing::{get, get_service, post},
     Router,
 };
@@ -15,7 +16,6 @@ mod auth_feature;
 mod chat_feature;
 mod config;
 mod db;
-mod jwt_auth;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,12 +34,12 @@ async fn main() -> Result<()> {
     let state = AppState { db, env: config };
 
     let app = Router::new()
-        .route("/", get(chat_feature::get_chat_page))
+        .route("/", get(get_index_page))
         .route("/login", get(auth_feature::get_login_page))
+        .route("/chat", get(chat_feature::get_chat_page))
         .route("/message", post(chat_feature::post_send_message))
         .route("/messages", get(chat_feature::get_list_messages))
         .nest_service("/assets", get_service(ServeDir::new("assets")))
-        .route_layer(middleware::from_fn_with_state(state.clone(), auth))
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -51,3 +51,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate;
+
+pub async fn get_index_page() -> impl IntoResponse {
+    IndexTemplate {}
+}
