@@ -1783,18 +1783,10 @@ html {
   width: 100%;
 }
 
-.max-w-sm {
-  max-width: 24rem;
-}
-
 .flex-col {
   flex-direction: column;
 }
 
 .gap-2 {
   gap: 0.5rem;
-}
-
-.gap-y-2 {
-  row-gap: 0.5rem;
 }

@@ -1,23 +1,26 @@
 use std::net::SocketAddr;
 
+use crate::{config::Config, db::ChatDB, jwt_auth::auth};
 use askama::Template;
 use axum::{
     extract::State,
+    http::StatusCode,
+    middleware,
     response::IntoResponse,
     routing::{get, get_service, post},
-    Form, Router, http::StatusCode, middleware,
+    Form, Router,
 };
 use color_eyre::eyre::Result;
 use dotenv::dotenv;
 use serde::Deserialize;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
 use tracing::info;
-use crate::{db::ChatDB, config::Config, jwt_auth::auth};
 
+mod auth_feature;
 mod config;
 mod db;
-mod model;
 mod jwt_auth;
+mod model;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -30,14 +33,14 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
     dotenv().unwrap();
-    
+
     let config = Config::init();
     let db = ChatDB::build(&config.database_url).await?;
     let state = AppState { db, env: config };
 
     let app = Router::new()
-        .route("/", get(index)) 
-        .route("/login", get(login))
+        .route("/", get(index))
+        .route("/login", get(auth_feature::get_login_page))
         .route("/message", post(send_message))
         .route("/messages", get(list_messages))
         .nest_service("/assets", get_service(ServeDir::new("assets")))
@@ -89,21 +92,11 @@ struct MessagesTemplate {
 
 async fn list_messages(State(state): State<AppState>) -> impl IntoResponse {
     let response = match state.db.list_all_messages().await {
-       Ok(messages) => MessagesTemplate { 
-        messages: messages
-            .into_iter()
-            .map(|msg| msg.text)
-            .collect()
-        }.into_response(),
-       Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
+        Ok(messages) => MessagesTemplate {
+            messages: messages.into_iter().map(|msg| msg.text).collect(),
+        }
+        .into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     };
     return response;
-}
-
-#[derive(Template)]
-#[template(path = "login.html")]
-struct LoginTemplate;
-
-async fn login() -> impl IntoResponse {
-    LoginTemplate {}
 }
