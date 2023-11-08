@@ -14,7 +14,10 @@
   "scripts": {
     "tw:watch": "tailwindcss -i ./styles/tailwind.css -o ./assets/main.css --watch",
     "cargo:watch": "cargo watch -x 'run --bin rust-chatbot-api'",
-    "dev": "concurrently \"bun run tw:watch\" \"bun run cargo:watch\""
+    "dev": "concurrently \"bun run tw:watch\" \"bun run cargo:watch\"",
+    "tw:build": "tailwindcss -i ./styles/tailwind.css -o ./assets/main.css",
+    "cargo:run": "cargo run --bin rust-chatbot-api",
+    "start": "bun run tw:build && bun run cargo:run"
   },
   "type": "module"
 }

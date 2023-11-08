@@ -4,7 +4,8 @@
     <link href="/assets/main.css" rel="stylesheet" />
     <!-- Allow any inheriting page to set it's own title -->
     <title>{% block title %}{{ title }}{% endblock %}</title>
-
+    
+    <script src="https://unpkg.com/htmx.org@1.9.7"></script>
     <!-- Allow any inheriting page to extend head with additional assets -->
     {% block head %}{% endblock %}
   </head>
@@ -25,6 +26,5 @@
       <!-- Inheriting pages will have their content rendered here, similar to app root in React, Angular, etc. -->
       {% block content %}{% endblock %}
     </div>
-    <script src="https://unpkg.com/htmx.org@1.9.7"></script>
   </body>
 </html>

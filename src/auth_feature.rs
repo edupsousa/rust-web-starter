@@ -13,7 +13,7 @@ pub struct LoginData {
 }
 
 pub enum LoginError {
-  BadValidation,
+    BadValidation,
 }
 
 #[derive(Template)]

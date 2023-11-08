@@ -41,6 +41,7 @@ async fn main() -> Result<()> {
         .route("/message", post(chat_feature::post_send_message))
         .route("/messages", get(chat_feature::get_list_messages))
         .nest_service("/assets", get_service(ServeDir::new("assets")))
+        .nest_service("/scripts", get_service(ServeDir::new("scripts")))
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
