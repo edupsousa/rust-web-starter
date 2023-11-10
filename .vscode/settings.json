@@ -3,7 +3,8 @@
     "strings": "on"
   },
   "files.associations": {
-    "*.css": "tailwindcss"
+    "*.css": "tailwindcss",
+    "*.sql": "sql"
   },
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,

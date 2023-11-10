@@ -4,8 +4,6 @@ use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool, Pool, FromRow};
 use tracing::info;
 use uuid::Uuid;
 
-const SQL_CREATE_MESSAGES_TABLE: &str = "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY NOT NULL, create_time NUMERIC NOT NULL, text TEXT NOT NULL);";
-
 #[derive(Debug, Clone, FromRow)]
 pub struct Message {
     pub id: String,
@@ -20,17 +18,15 @@ pub struct ChatDB {
 
 impl ChatDB {
     pub async fn build(db_url: &str) -> Result<Self> {
-        let mut is_new = false;
         if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
             info!("Creating database {}", db_url);
             Sqlite::create_database(db_url).await?;
-            is_new = true;
         }
         info!("Connecting to database {}", db_url);
         let pool = SqlitePool::connect(db_url).await?;
-        if is_new {
-            sqlx::query(SQL_CREATE_MESSAGES_TABLE).execute(&pool).await?;
-        }
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await?;
         return Ok(ChatDB { pool });
     }
 
