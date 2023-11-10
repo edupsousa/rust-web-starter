@@ -1,6 +1,6 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use crate::{config::Config, db::ChatDB};
+use crate::config::Config;
 use axum::{
     extract::State,
     response::IntoResponse,
@@ -9,6 +9,7 @@ use axum::{
 };
 use color_eyre::eyre::Result;
 use dotenv::dotenv;
+use sqlx::{migrate::MigrateDatabase, Pool, Sqlite, SqlitePool};
 use template_service::TemplateService;
 use tower_http::services::ServeDir;
 use tracing::info;
@@ -17,28 +18,41 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod auth_feature;
 mod chat_feature;
 mod config;
-mod db;
-mod template_service;
 mod jwt_auth;
+mod template_service;
+
+pub type DbState = Pool<Sqlite>;
+pub type ExtractedState = State<AppState>;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: ChatDB,
-    pub config: Config,
-    pub templates: TemplateService,
+    pub db: DbState,
+    pub config: Arc<Config>,
+    pub templates: Arc<TemplateService>,
 }
 
 impl AppState {
     pub async fn build() -> Result<Self> {
         let config = Config::init();
-        let db = ChatDB::build(&config.database_url).await?;
+        let db = Self::build_db_pool(&config.database_url).await?;
         let templates = TemplateService::build()?;
         let state = AppState {
             db,
-            config,
-            templates,
+            config: Arc::new(config),
+            templates: Arc::new(templates),
         };
         Ok(state)
+    }
+
+    async fn build_db_pool(db_url: &str) -> Result<DbState> {
+        if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
+            info!("Creating database {}", db_url);
+            Sqlite::create_database(db_url).await?;
+        }
+        info!("Connecting to database {}", db_url);
+        let pool = SqlitePool::connect(db_url).await?;
+        sqlx::migrate!("./migrations").run(&pool).await?;
+        return Ok(pool);
     }
 }
 

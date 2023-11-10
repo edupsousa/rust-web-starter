@@ -3,7 +3,6 @@ use tera::{Tera, Context};
 
 static TEMPLATES_GLOB: &str = "templates/**/*";
 
-#[derive(Clone)]
 pub struct TemplateService {
   tera: Tera,
 }

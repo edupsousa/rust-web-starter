@@ -40,7 +40,7 @@ pub async fn post_login(
         let html = state.templates.render("login.html", &context).unwrap();
         return html.into_response();
     }
-    let user = get_authenticated_user(&state.db.pool, &form.username, &form.password).await;
+    let user = get_authenticated_user(&state.db, &form.username, &form.password).await;
     if user.is_none() {
         let context = LoginTemplateData { error: true };
         let html = state.templates.render("login.html", &context).unwrap();
