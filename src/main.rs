@@ -19,6 +19,7 @@ mod chat_feature;
 mod config;
 mod db;
 mod template_service;
+mod jwt_auth;
 
 #[derive(Clone)]
 pub struct AppState {

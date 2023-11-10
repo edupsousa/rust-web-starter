@@ -7,6 +7,7 @@ use axum::{
 };
 
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
+use color_eyre::eyre::Result;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -50,7 +51,7 @@ pub async fn auth<B>(
     if let Some(token) = token {
         let claims = decode::<TokenClaims>(
             &token,
-            &DecodingKey::from_secret(data.env.jwt_secret.as_ref()),
+            &DecodingKey::from_secret(data.config.jwt_secret.as_ref()),
             &Validation::default(),
         )
         .map_err(|_| {
@@ -95,7 +96,7 @@ fn anonymous_login(data: AppState) -> (Uuid, Cookie<'static>) {
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(data.env.jwt_secret.as_ref()),
+        &EncodingKey::from_secret(data.config.jwt_secret.as_ref()),
     )
     .unwrap();
 
@@ -106,4 +107,29 @@ fn anonymous_login(data: AppState) -> (Uuid, Cookie<'static>) {
         .finish();
 
     return (user_id, cookie);
+}
+
+pub fn create_token_cookie(jwt_secret: &str, uid: &str) -> Result<Cookie<'static>> {
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+    let claims: TokenClaims = TokenClaims {
+        sub: uid.to_string(),
+        exp,
+        iat,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
+    )?;
+
+    let cookie = Cookie::build("token", token.to_owned())
+        .path("/")
+        .same_site(SameSite::Lax)
+        .http_only(true)
+        .finish();
+
+    return Ok(cookie);
 }

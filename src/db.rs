@@ -13,7 +13,7 @@ pub struct Message {
 
 #[derive(Clone)]
 pub struct ChatDB {
-    pool: Pool<Sqlite>,
+    pub pool: Pool<Sqlite>,
 }
 
 impl ChatDB {
