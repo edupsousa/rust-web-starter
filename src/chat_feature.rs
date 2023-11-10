@@ -1,5 +1,4 @@
-use askama_axum::IntoResponse;
-use axum::{Form, extract::State};
+use axum::{Form, extract::State, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;

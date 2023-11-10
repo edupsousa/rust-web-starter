@@ -1,5 +1,4 @@
-use askama_axum::IntoResponse;
-use axum::{extract::State, Form};
+use axum::{extract::State, Form, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

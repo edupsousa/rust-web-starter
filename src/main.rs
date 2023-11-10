@@ -1,10 +1,9 @@
 use std::net::SocketAddr;
 
 use crate::{config::Config, db::ChatDB};
-use askama_axum::IntoResponse;
 use axum::{
     routing::{get, get_service, post},
-    Router, extract::State,
+    Router, extract::State, response::IntoResponse,
 };
 use color_eyre::eyre::Result;
 use dotenv::dotenv;
