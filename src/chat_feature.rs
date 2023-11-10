@@ -5,13 +5,9 @@ use serde::Deserialize;
 
 use crate::AppState;
 
-
-#[derive(Template)]
-#[template(path = "chat.html")]
-struct IndexTemplate;
-
-pub async fn get_chat_page() -> impl IntoResponse {
-    IndexTemplate {}
+pub async fn get_chat_page( State(state): State<AppState> ) -> impl IntoResponse {
+    let html = state.templates.render_empty_context("chat.html").unwrap();
+    return html;
 }
 
 #[derive(Template)]
