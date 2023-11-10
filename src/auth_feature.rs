@@ -1,8 +1,9 @@
-use askama::Template;
 use askama_axum::IntoResponse;
-use axum::Form;
-use serde::Deserialize;
+use axum::{extract::State, Form};
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+use crate::AppState;
 
 #[derive(Deserialize, Validate)]
 pub struct LoginData {
@@ -12,26 +13,26 @@ pub struct LoginData {
     password: String,
 }
 
-pub enum LoginError {
-    BadValidation,
+#[derive(Serialize)]
+pub struct LoginTemplateData {
+    pub error: bool,
 }
 
-#[derive(Template)]
-#[template(path = "login.html")]
-pub struct LoginTemplate {
-    pub error: Option<LoginError>,
+pub async fn get_login_page(State(state): State<AppState>) -> impl IntoResponse {
+    let context = LoginTemplateData { error: false };
+    let html = state.templates.render("login.html", &context).unwrap();
+    return html;
 }
 
-pub async fn get_login_page() -> impl IntoResponse {
-    LoginTemplate { error: None }
-}
-
-pub async fn post_login(Form(form): Form<LoginData>) -> impl IntoResponse {
+pub async fn post_login(
+    State(state): State<AppState>,
+    Form(form): Form<LoginData>,
+) -> impl IntoResponse {
     let validation = form.validate();
-    return match validation {
-        Ok(_) => LoginTemplate { error: None },
-        Err(_) => LoginTemplate {
-            error: Some(LoginError::BadValidation),
-        },
+    let context = match validation {
+        Ok(_) => LoginTemplateData { error: false },
+        Err(_) => LoginTemplateData { error: true },
     };
+    let html = state.templates.render("login.html", &context).unwrap();
+    return html;
 }
