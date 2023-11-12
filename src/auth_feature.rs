@@ -1,16 +1,21 @@
+use std::fmt;
+
 use axum::{
     extract::State,
     response::{IntoResponse, Redirect},
-    Form, http::{Request, StatusCode, header}, middleware::Next, Json,
+    Form,
 };
-use axum_extra::extract::{CookieJar, cookie::{Cookie, SameSite}};
+use axum_extra::extract::{
+    cookie::{Cookie, SameSite},
+    CookieJar,
+};
 use color_eyre::eyre::Result;
-use jsonwebtoken::{encode, Header, EncodingKey, decode, DecodingKey, Validation};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use validator::Validate;
 
-use crate::{AppState};
+use crate::AppState;
 
 #[derive(Deserialize, Validate)]
 pub struct LoginData {
@@ -28,7 +33,8 @@ pub struct LoginTemplateData {
 pub async fn get_login_page(State(state): State<AppState>) -> impl IntoResponse {
     let context = LoginTemplateData { error: false };
     let html = state.templates.render("login.html", &context).unwrap();
-    return html;
+    
+    html
 }
 
 pub async fn post_login(
@@ -50,7 +56,8 @@ pub async fn post_login(
     }
     let user = user.unwrap();
     let cookie = create_user_jwt_cookie(&state.config.jwt_secret, &user).unwrap();
-    return (jar.add(cookie), Redirect::to("/chat")).into_response();
+    
+    (jar.add(cookie), Redirect::to("/chat")).into_response()
 }
 
 #[derive(Deserialize, sqlx::FromRow)]
@@ -78,96 +85,63 @@ async fn get_authenticated_user(db: &Pool<Sqlite>, username: &str, password: &st
     };
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct TokenClaims {
+#[derive(Serialize)]
+struct UserTokenClaims {
     sub: String,
     iat: usize,
     exp: usize,
+    name: String,
+}
+
+impl UserTokenClaims {
+    fn new(user: &User) -> Self {
+        let now = chrono::Utc::now();
+        let iat = now.timestamp() as usize;
+        let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+        return UserTokenClaims {
+            sub: user.uid.clone(),
+            exp,
+            iat,
+            name: user.username.clone(),
+        };
+    }
+}
+
+struct Token(String);
+
+impl Token {
+    fn build(claims: impl Serialize, jwt_secret: &str) -> Result<Self> {
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(jwt_secret.as_ref()),
+        )?;
+        
+        Ok(Token(token))
+    }
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Into<Cookie<'static>> for Token {
+    fn into(self) -> Cookie<'static> {
+        let cookie = Cookie::build("token", self.0)
+            .path("/")
+            .same_site(SameSite::Lax)
+            .http_only(true)
+            .finish();
+
+        cookie
+    }
 }
 
 fn create_user_jwt_cookie(jwt_secret: &str, user: &User) -> Result<Cookie<'static>> {
-    let now = chrono::Utc::now();
-    let iat = now.timestamp() as usize;
-    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
-    let claims: TokenClaims = TokenClaims {
-        sub: user.uid.clone(),
-        exp,
-        iat,
-    };
-
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(jwt_secret.as_ref()),
-    )?;
-
-    let cookie = Cookie::build("token", token.to_owned())
-        .path("/")
-        .same_site(SameSite::Lax)
-        .http_only(true)
-        .finish();
-
-    return Ok(cookie);
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub status: &'static str,
-    pub message: String,
-}
-
-#[allow(dead_code)]
-async fn auth<B>(
-    cookie_jar: CookieJar,
-    State(data): State<AppState>,
-    mut req: Request<B>,
-    next: Next<B>,
-) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
-    let token = cookie_jar
-        .get("token")
-        .map(|cookie| cookie.value().to_string())
-        .or_else(|| {
-            req.headers()
-                .get(header::AUTHORIZATION)
-                .and_then(|auth_header| auth_header.to_str().ok())
-                .and_then(|auth_value| {
-                    if auth_value.starts_with("Bearer ") {
-                        Some(auth_value[7..].to_owned())
-                    } else {
-                        None
-                    }
-                })
-        });
+    let claims = UserTokenClaims::new(user);
+    let token = Token::build(claims, jwt_secret)?;
     
-    if let Some(token) = token {
-        let claims = decode::<TokenClaims>(
-            &token,
-            &DecodingKey::from_secret(data.config.jwt_secret.as_ref()),
-            &Validation::default(),
-        )
-        .map_err(|_| {
-            let json_error = ErrorResponse {
-                status: "fail",
-                message: "Invalid token".to_string(),
-            };
-            (StatusCode::UNAUTHORIZED, Json(json_error))
-        })?
-        .claims;
-    
-        let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| {
-            let json_error = ErrorResponse {
-                status: "fail",
-                message: "Invalid token".to_string(),
-            };
-            (StatusCode::UNAUTHORIZED, Json(json_error))
-        })?;
-        req.extensions_mut().insert(user_id.to_string());
-        return Ok(next.run(req).await);
-    } else {
-        let json_error = ErrorResponse {
-            status: "fail",
-            message: "Token not set".to_string(),
-        };
-        return Err((StatusCode::UNAUTHORIZED, Json(json_error)));
-    }
+    Ok(token.into())
 }
