@@ -98,7 +98,7 @@ fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "rust-chatbot-api=debug,tower_http=debug,axum::rejection=trace".into()
+                "rust-web-starter=debug,tower_http=debug,axum::rejection=trace".into()
             }),
         )
         .with(tracing_subscriber::fmt::layer())

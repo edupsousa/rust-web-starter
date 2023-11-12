@@ -1548,7 +1548,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-chatbot-api"
+name = "rust-web-starter"
 version = "0.1.0"
 dependencies = [
  "axum",
