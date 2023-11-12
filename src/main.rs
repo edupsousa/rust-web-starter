@@ -18,7 +18,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod auth_feature;
 mod chat_feature;
 mod config;
-mod jwt_auth;
 mod template_service;
 
 pub type DbState = Pool<Sqlite>;
