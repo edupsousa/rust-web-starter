@@ -1,17 +1,19 @@
 use std::fmt;
 
 use axum::{
-    extract::State,
-    response::{IntoResponse, Redirect},
-    Form,
+    extract::{State, FromRequestParts, FromRef},
+    response::{IntoResponse, Redirect, Response},
+    Form, async_trait, http::{request::Parts, StatusCode}, Json,
+    RequestPartsExt
 };
 use axum_extra::extract::{
     cookie::{Cookie, SameSite},
     CookieJar,
 };
 use color_eyre::eyre::Result;
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{encode, EncodingKey, Header, decode, Validation, DecodingKey};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::{Pool, Sqlite};
 use validator::Validate;
 
@@ -85,12 +87,12 @@ async fn get_authenticated_user(db: &Pool<Sqlite>, username: &str, password: &st
     }
 }
 
-#[derive(Serialize)]
-struct UserTokenClaims {
-    sub: String,
+#[derive(Serialize, Deserialize)]
+pub struct UserTokenClaims {
     iat: usize,
     exp: usize,
-    name: String,
+    pub sub: String,
+    pub name: String,
 }
 
 impl UserTokenClaims {
@@ -144,4 +146,49 @@ fn create_user_jwt_cookie(jwt_secret: &str, user: &User) -> Result<Cookie<'stati
     let token = Token::build(claims, jwt_secret)?;
     
     Ok(token.into())
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for UserTokenClaims 
+where
+    S: Send + Sync,
+    AppState: FromRef<S>,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let cookie_jar = parts.extract_with_state::<CookieJar, _>(state).await.map_err(|_| AuthError::MissingToken)?;
+        
+        let cookie = cookie_jar
+            .get("token")
+            .ok_or(AuthError::MissingToken)?;
+
+        // Get the jwt secret from the app state
+        let state = AppState::from_ref(state);
+        let key = &DecodingKey::from_secret(state.config.jwt_secret.as_ref());
+        
+        // Decode the user data
+        let token_data = decode::<UserTokenClaims>(cookie.value(), key, &Validation::default())
+            .map_err(|_| AuthError::InvalidToken)?;
+
+        Ok(token_data.claims)       
+    }
+}
+
+pub enum AuthError {
+    InvalidToken,
+    MissingToken,
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AuthError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
+            AuthError::MissingToken => (StatusCode::UNAUTHORIZED, "Missing token.")
+        };
+        let body = Json(json!({
+            "error": error_message,
+        }));
+        (status, body).into_response()
+    }
 }

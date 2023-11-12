@@ -3,7 +3,7 @@
  
 {% block content %}
 
-<h1>ChatBot</h1>
+<h1>ChatBot - {{ name }}</h1>
 <ul id="message_list" hx-get="/messages" hx-trigger="every 2s">
     <li>Hello!</li>
 </ul>

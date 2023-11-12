@@ -5,11 +5,19 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{AppState, DbState};
+use crate::{AppState, DbState, auth_feature::UserTokenClaims};
 
-pub async fn get_chat_page(State(state): State<AppState>) -> impl IntoResponse {
+#[derive(Serialize)]
+pub struct ChatTemplate {
+    name: String,
+}
+
+pub async fn get_chat_page(State(state): State<AppState>, token: UserTokenClaims) -> impl IntoResponse {
     
-    state.templates.render_empty_context("chat.html").unwrap()
+    let context = ChatTemplate {
+        name: token.name
+    };
+    state.templates.render("chat.html", &context).unwrap()
 }
 
 #[derive(Serialize)]
