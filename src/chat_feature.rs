@@ -8,8 +8,8 @@ use uuid::Uuid;
 use crate::{AppState, DbState};
 
 pub async fn get_chat_page(State(state): State<AppState>) -> impl IntoResponse {
-    let html = state.templates.render_empty_context("chat.html").unwrap();
-    return html;
+    
+    state.templates.render_empty_context("chat.html").unwrap()
 }
 
 #[derive(Serialize)]
@@ -29,8 +29,8 @@ pub async fn post_send_message(
     let message = send_message.new_message;
     push_message(&state.db, &message).await.unwrap();
     let context = MessageTemplate { message };
-    let html = state.templates.render("message.html", &context).unwrap();
-    return html;
+    
+    state.templates.render("message.html", &context).unwrap()
 }
 
 #[derive(Serialize)]
@@ -43,8 +43,8 @@ pub async fn get_list_messages(State(state): State<AppState>) -> impl IntoRespon
     let context = MessagesTemplate {
         messages: messages.into_iter().map(|msg| msg.text).collect(),
     };
-    let html = state.templates.render("messages.html", &context).unwrap();
-    return html;
+    
+    state.templates.render("messages.html", &context).unwrap()
 }
 
 pub async fn push_message(db: &DbState, text: &str) -> Result<()> {
@@ -56,7 +56,7 @@ pub async fn push_message(db: &DbState, text: &str) -> Result<()> {
         .bind(text)
         .execute(db)
         .await?;
-    return Ok(());
+    Ok(())
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -71,5 +71,5 @@ pub async fn list_all_messages(db: &DbState) -> Result<Vec<Message>> {
         sqlx::query_as::<_, Message>("SELECT * FROM messages ORDER BY create_time;")
             .fetch_all(db)
             .await?;
-    return Ok(messages_result);
+    Ok(messages_result)
 }

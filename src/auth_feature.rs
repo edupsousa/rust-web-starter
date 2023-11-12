@@ -32,9 +32,9 @@ pub struct LoginTemplateData {
 
 pub async fn get_login_page(State(state): State<AppState>) -> impl IntoResponse {
     let context = LoginTemplateData { error: false };
-    let html = state.templates.render("login.html", &context).unwrap();
     
-    html
+    
+    state.templates.render("login.html", &context).unwrap()
 }
 
 pub async fn post_login(
@@ -76,13 +76,13 @@ async fn get_authenticated_user(db: &Pool<Sqlite>, username: &str, password: &st
     match user {
         Ok(Some(user)) => {
             if user.password == password {
-                return Some(user);
+                Some(user)
             } else {
-                return None;
+                None
             }
         }
-        _ => return None,
-    };
+        _ => None,
+    }
 }
 
 #[derive(Serialize)]
@@ -98,12 +98,12 @@ impl UserTokenClaims {
         let now = chrono::Utc::now();
         let iat = now.timestamp() as usize;
         let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
-        return UserTokenClaims {
+        UserTokenClaims {
             sub: user.uid.clone(),
             exp,
             iat,
             name: user.username.clone(),
-        };
+        }
     }
 }
 
@@ -127,9 +127,9 @@ impl fmt::Display for Token {
     }
 }
 
-impl Into<Cookie<'static>> for Token {
-    fn into(self) -> Cookie<'static> {
-        let cookie = Cookie::build("token", self.0)
+impl From<Token> for Cookie<'static> {
+    fn from(val: Token) -> Self {
+        let cookie = Cookie::build("token", val.0)
             .path("/")
             .same_site(SameSite::Lax)
             .http_only(true)

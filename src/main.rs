@@ -51,7 +51,7 @@ impl AppState {
         info!("Connecting to database {}", db_url);
         let pool = SqlitePool::connect(db_url).await?;
         sqlx::migrate!("./migrations").run(&pool).await?;
-        return Ok(pool);
+        Ok(pool)
     }
 }
 
