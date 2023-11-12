@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(get_index_page))
-        .route("/login", get(auth_feature::get_login_page))
+        .route("/login", get(auth_feature::get_login))
         .route("/login", post(auth_feature::post_login))
         .route("/chat", get(chat_feature::get_chat_page))
         .route("/message", post(chat_feature::post_send_message))
